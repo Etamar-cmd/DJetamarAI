@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ iTAMAR AI - Pro Edition</title>
+    <style>
+        :root { 
+            --red: #ff4444; --green: #2ecc71; --blue: #3498db; --bg: #0f0f0f; --card: #1e1e1e; 
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            background: #121212; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; font-family: system-ui, sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- מסגרת האייפון --- */
+        .iphone-x {
+            position: relative;
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 55px;
+            border: 12px solid #2c2c2e;
+            box-shadow: 0 50px 100px -20px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dynamic-island {
+            position: absolute;
+            top: 15px; left: 50%; transform: translateX(-50%);
+            width: 110px; height: 32px; background: #000;
+            border-radius: 20px; z-index: 2000;
+        }
+
+        /* --- תוכן האפליקציה --- */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%; height: 100%;
+            background: var(--bg);
+            color: white;
+            position: relative;
+        }
+
+        .app-header {
+            flex-shrink: 0; background: var(--bg); border-bottom: 2px solid #222; z-index: 100; padding-top: 15px;
+        }
+
+        #player-wrapper { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; }
+        #progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #333; }
+        #progress-bar { width: 0%; height: 100%; background: var(--green); transition: width 0.5s linear; }
+
+        /* --- טקסט רץ DJ @etamarAI (איטי ב-50%) --- */
+        .marquee-container {
+            width: 100%; background: #1a1a1a; overflow: hidden; white-space: nowrap; padding: 10px 0; border-bottom: 1px solid #333;
+        }
+        .marquee-text {
+            display: inline-block; font-size: 1.2rem; font-weight: bold; color: var(--blue);
+            animation: marquee 16s linear infinite; /* שונה מ-8 ל-16 שניות */
+            padding-right: 50px;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .controls-padding { padding: 10px 15px; }
+        .main-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        
+        button { border: none; border-radius: 10px; padding: 12px 5px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-play { background: var(--green); grid-column: span 3; font-size: 1rem; padding: 15px; }
+        .btn-pause { background: #f1c40f; color: #000; }
+        .btn-skip { background: var(--blue); }
+        .btn-stop { background: var(--red); }
+
+        /* --- גוף גלילה --- */
+        .scrollable-body {
+            flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 60px; scrollbar-width: none;
+        }
+        .scrollable-body::-webkit-scrollbar { display: none; }
+
+        /* טופס */
+        details { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .form { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; width: 100%; }
+        
+        .input-row { display: flex; gap: 8px; width: 100%; }
+        input { background: #000; color: #fff; border: 1px solid #444; padding: 12px; border-radius: 8px; font-size: 16px; width: 100%; }
+
+        /* --- בורר זמן (Stepper) --- */
+        .stepper-label { font-size: 0.8rem; color: #888; margin-bottom: 4px; display: block; }
+        .stepper { display: flex; align-items: center; background: #000; border: 1px solid #444; border-radius: 8px; overflow: hidden; flex: 1; }
+        .stepper button { border-radius: 0; padding: 10px; background: #333; width: 40px; font-size: 1.2rem; }
+        .stepper input { border: none; text-align: center; padding: 5px; font-family: monospace; font-size: 1.1rem; pointer-events: none; }
+
+        /* חיפוש ושירים */
+        .search-box input { border-color: var(--blue); margin: 15px 0; }
+        .song-item { background: var(--card); margin-bottom: 10px; padding: 12px; border-radius: 15px; border-right: 4px solid #444; }
+        .song-item.active { border-right-color: var(--green); background: #1a2a1a; }
+        .genre-tag { background: #333; color: var(--blue); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; border: 1px solid var(--blue); margin-right: 5px;}
+
+        .home-indicator {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 5px; background: rgba(255,255,255,0.3); border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="iphone-x">
+    <div class="dynamic-island"></div>
+    
+    <div class="app-container">
+        <div class="app-header">
+            <div id="player-wrapper">
+                <div id="main-player"></div>
+                <div id="progress-container"><div id="progress-bar"></div></div>
+            </div>
+            
+            <!-- טקסט רץ DJ @etamarAI (איטי) -->
+            <div class="marquee-container">
+                <div class="marquee-text">DJ @etamarAI • DJ @etamarAI • DJ @etamarAI • DJ @etamarAI</div>
+            </div>
+
+            <div class="controls-padding">
+                <div class="main-controls">
+                    <button class="btn-play" onclick="startSession()">▶ הפעל סשן</button>
+                    <button class="btn-pause" id="pauseBtn" onclick="togglePause()">⏸</button>
+                    <button class="btn-skip" onclick="skipTrack()">⏭</button>
+                    <button class="btn-stop" onclick="stopEverything()">⏹</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="scrollable-body">
+            <details id="formDetails">
+                <summary>➕ הוסף שיר למאגר</summary>
+                <div class="form">
+                    <input type="hidden" id="editUid">
+                    <input type="text" id="inUrl" placeholder="לינק יוטיוב">
+                    
+                    <div class="input-row">
+                        <input type="text" id="inArtist" placeholder="אמן" style="flex:1">
+                        <input type="text" id="inGenre" placeholder="ז'אנר" style="flex:1">
+                    </div>
+                    
+                    <input type="text" id="inTitle" placeholder="שם השיר">
+
+                    <div class="input-row">
+                        <div style="flex:1">
+                            <span class="stepper-label">התחלה (שניות)</span>
+                            <div class="stepper">
+                                <button onclick="step('inStart', -1)">-</button>
+                                <input type="text" id="inStart" value="000" readonly>
+                                <button onclick="step('inStart', 1)">+</button>
+                            </div>
+                        </div>
+                        <div style="flex:1">
+                            <span class="stepper-label">סיום (שניות)</span>
+                            <div class="stepper">
+                                <button onclick="step('inEnd', -1)">-</button>
+                                <input type="text" id="inEnd" value="000" readonly>
+                                <button onclick="step('inEnd', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="saveSong()" style="background:var(--red); padding:15px; margin-top:10px;">שמור שיר</button>
+                </div>
+            </details>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 חפש במחסנית..." oninput="render()">
+            </div>
+
+            <h3 style="color:var(--blue); font-size:0.9rem;">🔥 סדר נגינה</h3>
+            <div id="activeContainer"></div>
+
+            <h3 style="color:#666; font-size:0.9rem;">📦 מחסנית</h3>
+            <div id="libraryContainer"></div>
+        </div>
+    </div>
+    <div class="home-indicator"></div>
+</div>
+
+<script>
+    let player;
+    let songs = JSON.parse(localStorage.getItem('dj_songs_v4')) || [];
+    let currentPlayingUid = null;
+    let monitorInterval;
+
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('main-player', {
+            height: '100%', width: '100%',
+            playerVars: { 'autoplay': 0, 'controls': 1, 'playsinline': 1 },
+            events: { 'onStateChange': onPlayerStateChange, 'onReady': () => render() }
+        });
+    }
+
+    function step(id, val) {
+        const el = document.getElementById(id);
+        let current = parseInt(el.value);
+        current = Math.max(0, current + val);
+        el.value = current.toString().padStart(3, '0');
+    }
+
+    function saveSong() {
+        const uid = document.getElementById('editUid').value || Date.now().toString();
+        const url = document.getElementById('inUrl').value;
+        const idMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+        if (!idMatch) return alert("לינק לא תקין");
+
+        const songData = {
+            uid: uid, id: idMatch[1], 
+            artist: document.getElementById('inArtist').value || "אמן",
+            title: document.getElementById('inTitle').value || "שיר",
+            genre: document.getElementById('inGenre').value || "",
+            start: parseInt(document.getElementById('inStart').value),
+            end: parseInt(document.getElementById('inEnd').value) || null,
+            selected: true 
+        };
+
+        const idx = songs.findIndex(s => s.uid === uid);
+        if (idx > -1) songs[idx] = songData; else songs.push(songData);
+
+        localStorage.setItem('dj_songs_v4', JSON.stringify(songs));
+        resetForm(); render();
+    }
+
+    function render() {
+        const activeContainer = document.getElementById('activeContainer');
+        const libraryContainer = document.getElementById('libraryContainer');
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        activeContainer.innerHTML = ""; libraryContainer.innerHTML = "";
+        
+        songs.forEach((s) => {
+            const matchesSearch = s.artist.toLowerCase().includes(searchTerm) || s.title.toLowerCase().includes(searchTerm) || s.genre.toLowerCase().includes(searchTerm);
+            const html = `
+                <div class="song-item ${s.uid === currentPlayingUid ? 'active' : ''}">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" ${s.selected ? 'checked' : ''} onchange="toggleSelect('${s.uid}')" style="width:20px;height:20px;">
+                        <div style="flex:1; overflow:hidden;">
+                            <b style="display:block; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${s.artist} - ${s.title}</b>
+                            <span style="font-size:0.7rem; color:#aaa;">${s.genre ? `<span class="genre-tag">${s.genre}</span>` : ''} ${s.start}s - ${s.end || 'סוף'}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-top:10px;">
+                        <button style="background:var(--green); flex:2;" onclick="playTrack('${s.uid}')">נגן</button>
+                        <button style="background:#333; flex:1;" onclick="removeSong('${s.uid}')">🗑</button>
+                    </div>
+                </div>
+            `;
+            if (s.selected) activeContainer.innerHTML += html;
+            else if (matchesSearch) libraryContainer.innerHTML += html;
+        });
+    }
+
+    function toggleSelect(uid) {
+        const s = songs.find(x => x.uid === uid);
+        s.selected = !s.selected;
+        localStorage.setItem('dj_songs_v4', JSON.stringify(songs));
+        render();
+    }
+
+    function removeSong(uid) {
+        songs = songs.filter(s => s.uid !== uid);
+        localStorage.setItem('dj_songs_v4', JSON.stringify(songs));
+        render();
+    }
+
+    function resetForm() {
+        document.getElementById('editUid').value = "";
+        document.getElementById('inUrl').value = "";
+        document.getElementById('inArtist').value = "";
+        document.getElementById('inTitle').value = "";
+        document.getElementById('inGenre').value = "";
+        document.getElementById('inStart').value = "000";
+        document.getElementById('inEnd').value = "000";
+        document.getElementById('formDetails').open = false;
+    }
+
+    function playTrack(uid) {
+        const s = songs.find(x => x.uid === uid);
+        if (!s) return;
+        currentPlayingUid = uid; render();
+        player.loadVideoById({ videoId: s.id, startSeconds: s.start });
+        startMonitor(s);
+    }
+
+    function startMonitor(s) {
+        clearInterval(monitorInterval);
+        const bar = document.getElementById('progress-bar');
+        monitorInterval = setInterval(() => {
+            const now = player.getCurrentTime();
+            const dur = s.end || player.getDuration();
+            if (dur > 0) {
+                const pct = ((now - s.start) / (dur - s.start)) * 100;
+                bar.style.width = Math.min(pct, 100) + "%";
+            }
+            if (s.end && now >= s.end) skipTrack();
+        }, 500);
+    }
+
+    function onPlayerStateChange(e) { if (e.data === YT.PlayerState.ENDED) skipTrack(); }
+
+    function skipTrack() {
+        const selected = songs.filter(s => s.selected);
+        const idx = selected.findIndex(s => s.uid === currentPlayingUid);
+        if (idx > -1 && idx < selected.length - 1) playTrack(selected[idx + 1].uid);
+    }
+
+    function startSession() {
+        const selected = songs.filter(s => s.selected);
+        if (selected.length > 0) playTrack(selected[0].uid);
+    }
+
+    function togglePause() {
+        const state = player.getPlayerState();
+        if (state === 1) player.pauseVideo(); else player.playVideo();
+    }
+
+    function stopEverything() {
+        clearInterval(monitorInterval); player.stopVideo(); 
+        currentPlayingUid = null; render();
+        document.getElementById('progress-bar').style.width = "0%";
+    }
+</script>
+
+</body>
+</html>
